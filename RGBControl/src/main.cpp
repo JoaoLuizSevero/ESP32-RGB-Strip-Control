@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <Adafruit_NeoPixel.h>
 #include <WebServer.h>
+#include <WebSocketsServer.h>
 #include "FS.h"
 #include "SPIFFS.h"
 #include "esp_spiffs.h"
@@ -13,10 +14,11 @@ int nodeLength;
 int color[100][3];
 
 WebServer server(80);
+WebSocketsServer webSocket(81);
 Adafruit_NeoPixel pixels(nodeLength, LED_PIN, NEO_GRB + NEO_KHZ800);
-
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
 void configureNodes();
 void sendSignal();
 void handleRoot();
@@ -26,7 +28,7 @@ void startPage();
 void setup()
 {
   Serial.begin(115200);
-
+  
   configureNodes();
   pixels.updateLength(nodeLength);
   pixels.begin();
@@ -36,6 +38,8 @@ void setup()
   server.on("/", handleRoot);
   server.onNotFound(handleNotFound);
   server.begin();
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
 }
 
 void loop()
@@ -53,7 +57,7 @@ void startPage()
   Serial.println("Initialyzing AP...");
   while (1)
   {
-    //webSocket.loop();
+    webSocket.loop();
     server.handleClient();
   }
 }
@@ -70,6 +74,60 @@ void handleRoot()
 void handleNotFound()
 {
   server.send(404, "text/plain", "404: Not found");
+}
+
+//============================================== WEBSOCKET HANDLE
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
+{
+  switch (type)
+  {
+  case WStype_DISCONNECTED:
+    break;
+  case WStype_CONNECTED:
+  {
+    IPAddress ip = webSocket.remoteIP(num);
+  }
+  break;
+  case WStype_TEXT:
+
+    StaticJsonDocument<512> jsonBuffer;
+    deserializeJson(jsonBuffer, payload);
+    JsonObject jsonObject = jsonBuffer.as<JsonObject>();
+
+    if (jsonObject.containsKey("payload"))
+    {
+      int len = measureJson(jsonObject);
+      char buff[len];
+      serializeJson(jsonObject, buff, len + 1);
+
+      unlink("/config.txt");
+      delay(100);
+      FILE *f = fopen("/config.txt", "w");
+      fprintf(f, buff);
+      fclose(f);
+      delay(100);
+      configureNodes();
+    }
+
+    if (jsonObject.containsKey("getConfig"))
+    {
+      DynamicJsonDocument nodesConfig(JSON_ARRAY_SIZE(512));
+
+      nodesConfig["payload"]["size"] = nodeLength;
+      for (int i = 0; i < nodeLength; i++)
+      {
+        nodesConfig["payload"]["nodes"]["node_" + String(i)]["r"] = color[i][0];
+        nodesConfig["payload"]["nodes"]["node_" + String(i)]["g"] = color[i][1];
+        nodesConfig["payload"]["nodes"]["node_" + String(i)]["b"] = color[i][2];
+      }
+      int len = measureJson(nodesConfig);
+      char _array[len];
+      serializeJson(nodesConfig, _array, len + 1);
+      webSocket.sendTXT(0, _array, strlen(_array));
+    }
+    break;
+  }
 }
 
 //============================================== SIGNAL HANDLE

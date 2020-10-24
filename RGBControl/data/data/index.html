@@ -13,7 +13,7 @@
         }
 
         div#frame {
-            width: 350px;
+            width: 320px;
             height: auto;
             text-align: center;
             margin: 0 auto;
@@ -25,11 +25,11 @@
             box-shadow: 5px 5px 7px rgba(0, 0, 0, 0.5);
         }
 
-        div#leds {
+        ul#leds {
             margin-bottom: 20px;
         }
 
-        input#color {
+        input#colorBox {
             margin-top: -10px;
             width: 230px;
             height: 30px;
@@ -41,6 +41,10 @@
             width: 40px;
             border: 2px solid rgb(150, 150, 150);
             border-radius: 5px;
+        }
+
+        input[type=number]::-webkit-inner-spin-button {
+            opacity: 1
         }
 
         p {
@@ -65,7 +69,7 @@
 
         }
 
-        button {
+        button#sendConfig {
             font-size: 12pt;
             font-weight: bold;
             color: rgb(65, 65, 65);
@@ -74,40 +78,171 @@
             padding: 7px 20px 7px 20px;
             margin-bottom: 15px;
         }
+
+        button.colorButton {
+            width: 25px;
+            height: 25px;
+            border-radius: 100%;
+            font-weight: bold;
+            color: white;
+            margin-right: 5px;
+            background-color: rgb(151, 151, 151);
+        }
     </style>
     <script>
-        document.onload = setTimeout(function () { changeLeds() }, 100)
+        var socket;
+        connectWebSocket();
+        var activeLed = 0
+        var ledsArray = []
 
-        function changeLeds() {
-            let size = document.querySelector("#size").value
-            document.querySelector("#leds").innerHTML = ""
-            for (let i = 0; i < size; i++) {
-                document.querySelector("#leds").innerHTML += "<input type='radio' name='led' value='" + i + "'>"
-            }
+        function initConfiguration() {
+
+            
         }
-        function colorChange() {
-            let color = document.getElementById("color").value
+
+        function selectLed(element) {
+            activeLed = Number(document.querySelector("#" + element.id).innerHTML) - 1
+            document.getElementById('colorBox').value = ledsArray[activeLed]["color"]
+            changeColorBox();
+        }
+
+        // setInterval(function(){
+        // }, 100)
+        
+        // function changeLeds() {
+        //     let size = document.querySelector("#size").value
+        //     size < 1 ? size = 1 : size = size
+        //     size > 10 ? size = 10 : size = size
+        //     document.querySelector("#size").value = size
+        //     document.querySelector("#leds").innerHTML = ""
+        //     for (let i = 0; i < size; i++) {
+        //         document.querySelector("#leds").innerHTML += "<button class='colorButton' id='buttonLed" + i + "' name='led' value='" + i + "' style='background-color: "+ledsArray[i]["color"]+";' onclick='selectLed(this)'>" + (i + 1)
+        //     }
+        // }
+
+        function changeColorBox(){
+            let color = document.getElementById("colorBox").value
             let r = color.slice(1, -4)
             let g = color.slice(3, -2)
             let b = color.slice(5)
             document.getElementById("r").value = parseInt(r, 16)
             document.getElementById("g").value = parseInt(g, 16)
             document.getElementById("b").value = parseInt(b, 16)
+            document.getElementById("buttonLed" + activeLed).style.backgroundColor = color
         }
+
         function rgbChange() {
             let r = document.getElementById("r").value
             let g = document.getElementById("g").value
             let b = document.getElementById("b").value
-            let hr = Number(r).toString(16)
-            let hg = Number(g).toString(16)
-            let hb = Number(b).toString(16)
-            r<16?hr="0"+hr:hr=hr
-            g<16?hg="0"+hg:hg=hg
-            b<16?hb="0"+hb:hb=hb
-            let color = "#"+hr+hg+hb
-            document.getElementById("color").value = color
+            r < 0 ? r = 0 : r = r
+            g < 0 ? g = 0 : g = g
+            b < 0 ? b = 0 : b = b
+            r > 255 ? r = 255 : r = r
+            g > 255 ? g = 255 : g = g
+            b > 255 ? b = 255 : b = b
+            document.getElementById("r").value = r
+            document.getElementById("g").value = g
+            document.getElementById("b").value = b
+            let color = "#" + decToHex(r) + decToHex(g) + decToHex(b)
+            document.getElementById("colorBox").value = color
+            document.getElementById("buttonLed" + activeLed).style.backgroundColor = color
         }
 
+        function getConfigJson() {
+            var JsonData = {
+                "getConfig": {
+                    "message": null
+                }
+            }
+            console.log("SEND MESSAGE: " + JSON.stringify(JsonData));
+            socket.send(JSON.stringify(JsonData))
+        }
+
+        // $("#salvarWifi").on('click', function () {
+        //     console.log('salvando Wifi');
+        //     var canal = $('#channelInputField').val();
+        //     switch (canal) {
+        //         case "1 (2412 MHz)":
+        //             canal = 1;
+        //             break
+        //         case "2 (2417 MHz)":
+        //             canal = 2;
+        //             break
+        //     }
+        //     var JsonData = {
+        //         "wifiParameters": {
+        //             "WIFI_usuario": $('#ssidInputField').val(),
+        //             "WIFI_senha": $('#passInputField').val(),
+        //             "WIFI_fixo": $('#customSwitch1').is(':checked'),
+        //             "WIFI_ip": $('#WIFI_ip').val(),
+        //             "WIFI_gateway": $('#WIFI_gateway').val(),
+        //             "WIFI_subnet": $('#WIFI_subnet').val(),
+        //             "WIFI_canal": canal
+        //         }
+        //     };
+        //     socket.send(JSON.stringify(JsonData));
+        //     console.log(JsonData);
+        //     //socketMessage(JsonData);
+        // });
+
+        function connectWebSocket() {
+            //socket = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
+            socket = new WebSocket('ws://192.168.4.1:81/', ['arduino']);
+
+            socket.binaryType = 'arraybuffer';
+
+            socket.onopen = function () {
+                console.log('Connect ' + new Date());
+                getConfigJson()
+            };
+
+            socket.onclose = function (e) {
+                console.log('Socket is closed. Reconnect will be attempted in 500 miliseconds.', e.reason);
+                setTimeout(function () {
+                    connectWebSocket();
+                }, 5000);
+            };
+
+            socket.onerror = function (err) {
+                console.error('Socket encountered error: ', err.message, 'Closing socket');
+                socket.close();
+            };
+
+            socket.onmessage = function (e) {
+                var jsonData = JSON.parse(e.data);
+                switch (Object.keys(jsonData)[0]) {
+                    case "payload":
+                        console.log("INCOMING MESSAGE: " + JSON.stringify(jsonData));
+                        let size = jsonData["payload"]["size"]
+                        document.querySelector("#size").value = size
+                        for(let i=0;i<size;i++){
+                            let r = decToHex(jsonData["payload"]["nodes"]["node_"+i]["r"])
+                            let g = decToHex(jsonData["payload"]["nodes"]["node_"+i]["g"])
+                            let b = decToHex(jsonData["payload"]["nodes"]["node_"+i]["b"])
+                            let color = "#"+r+g+b
+                            ledsArray.push({ "n": i, "color": color});
+                        }
+                        for (let i = 0; i < size; i++) {
+                            document.querySelector("#leds").innerHTML += "<button class='colorButton' id='buttonLed" + i + "' name='led' value='" + i + "' style='background-color: "+ledsArray[i]["color"]+";' onclick='selectLed(this)'>" + (i + 1)
+                        }
+                        document.getElementById('colorBox').value = ledsArray[0]["color"]
+                        changeColorBox();
+
+
+
+                        break;
+                }
+            }
+        }
+
+
+//===================================
+        function decToHex(n){
+            let sn = Number(n).toString(16)
+            n < 16 ? sn = "0" + sn : sn = sn
+            return sn
+        }
 
     </script>
 
@@ -117,13 +252,12 @@
     <div id="frame">
         <h1>RGB strip configuration </h1>
         <hr>
-        <p>Number of LEDs <input type="number" class="rgb" id="size" min="1" max="10" value="1" onchange="changeLeds()"></p>
-        <div id="leds">
-
-        </div>
+        <p>Number of LEDs <input type="number" class="rgb" id="size" min="1" max="10" onchange="changeLeds()">
+        </p>
+        <div id="leds"></div>
         <hr>
-        <h2>Color</h2>
-        <input type="color" id="color" onchange="colorChange()">
+        <h2 id="test">Color</h2>
+        <input type="color" id="colorBox" onchange="changeColorBox()">
         <p>
             Red <input type="number" class="rgb" id="r" min="0" max="255" value="0" onchange="rgbChange()">
             Green <input type="number" class="rgb" id="g" min="0" max="255" value="0" onchange="rgbChange()">
