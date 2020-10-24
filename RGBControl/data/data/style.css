@@ -1,0 +1,67 @@
+body{
+    text-align: center;
+    background-image: linear-gradient(to right, rgba(0,0,0,0.7), rgba(180,180,180,1));
+}
+
+div#frame{
+    width: 350px;
+    height: auto;
+    text-align: center;
+    margin: 0 auto;
+    margin-top: 80px;
+    border-bottom: 4px solid rgb(70, 70, 70);
+    border-right: 4px solid rgb(70, 70, 70);
+    border-radius: 15px;
+    background-color: rgb(56, 56, 56);
+    box-shadow: 5px 5px 7px rgba(0,0,0,0.5);
+}
+
+div#leds{
+    margin-bottom: 20px;
+}
+
+input#color{
+    margin-top: -10px;
+    width: 230px;
+    height: 30px;
+    border: 2px solid rgb(150, 150, 150);
+    border-radius: 5px;
+}
+
+input.rgb{
+    width: 40px;
+    border: 2px solid rgb(150, 150, 150);
+    border-radius: 5px;
+}
+
+p{
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    color: white;
+}
+
+h1{
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 20pt;
+    font-weight: bold;
+    color: white;
+    padding-top: 20px;
+}
+
+h2{
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18pt;
+    font-weight: bold;
+    color: white;
+
+}
+
+button{
+    font-size: 12pt;
+    font-weight: bold;
+    color: rgb(65, 65, 65);
+    margin-top: 15px;
+    border-radius: 7px;
+    padding: 7px 20px 7px 20px;
+    margin-bottom: 15px;
+}
