@@ -10,7 +10,7 @@
 
 #define LED_PIN 2
 
-int nodeLength;
+int nodeLength = 10;
 int color[100][3];
 
 WebServer server(80);
@@ -29,10 +29,12 @@ void setup()
 {
   Serial.begin(115200);
   
-  configureNodes();
-  pixels.updateLength(nodeLength);
   pixels.begin();
-  sendSignal();
+  configureNodes();
+  
+  //pixels.updateLength(nodeLength);
+
+  //sendSignal();
 
   WiFi.mode(WIFI_AP_STA);
   server.on("/", handleRoot);
@@ -101,12 +103,15 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       char buff[len];
       serializeJson(jsonObject, buff, len + 1);
 
-      unlink("/config.txt");
+      SPIFFS.begin();
+      SPIFFS.remove("/config.txt");
       delay(100);
-      FILE *f = fopen("/config.txt", "w");
-      fprintf(f, buff);
-      fclose(f);
+      File rFile = SPIFFS.open("/config.txt","w+");
+      rFile.print(buff);
+      rFile.close();
+      SPIFFS.end();
       delay(100);
+
       configureNodes();
     }
 
@@ -121,9 +126,14 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
         nodesConfig["payload"]["nodes"]["node_" + String(i)]["g"] = color[i][1];
         nodesConfig["payload"]["nodes"]["node_" + String(i)]["b"] = color[i][2];
       }
+
       int len = measureJson(nodesConfig);
       char _array[len];
       serializeJson(nodesConfig, _array, len + 1);
+
+      Serial.print("SENDING NODES: ");
+      Serial.println(_array);
+
       webSocket.sendTXT(0, _array, strlen(_array));
     }
     break;
@@ -135,7 +145,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 void sendSignal()
 {
   pixels.clear();
-  for (int i = 0; i <= nodeLength; i++)
+  for (int i = 0; i <= nodeLength-1; i++)
   {
     pixels.setPixelColor(i, pixels.Color(color[i][0], color[i][1], color[i][2]));
   }
@@ -146,12 +156,17 @@ void sendSignal()
 
 void configureNodes()
 {
+  pixels.clear();
+
   SPIFFS.begin();
   File rFile = SPIFFS.open("/config.txt","r");
   String content = rFile.readString();
   rFile.close();
   SPIFFS.end();
   
+  Serial.print("LOADING NODES: ");
+  Serial.println(content);
+
   StaticJsonDocument<512> jsonBuffer;
   deserializeJson(jsonBuffer, content);
   JsonObject jsonObject = jsonBuffer.as<JsonObject>();
@@ -164,4 +179,5 @@ void configureNodes()
       color[i][n] = _color.as<int>();
     }
   }
+  sendSignal();
 }

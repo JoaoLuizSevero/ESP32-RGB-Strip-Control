@@ -69,7 +69,7 @@
 
         }
 
-        button#sendConfig {
+        button.formButton {
             font-size: 12pt;
             font-weight: bold;
             color: rgb(65, 65, 65);
@@ -86,6 +86,7 @@
             font-weight: bold;
             color: white;
             margin-right: 5px;
+            margin-bottom: 10px;
             background-color: rgb(151, 151, 151);
         }
     </style>
@@ -93,12 +94,9 @@
         var socket;
         connectWebSocket();
         var activeLed = 0
+        var lastSize
         var ledsArray = []
-
-        function initConfiguration() {
-
-            
-        }
+        var actualJson
 
         function selectLed(element) {
             activeLed = Number(document.querySelector("#" + element.id).innerHTML) - 1
@@ -108,19 +106,30 @@
 
         // setInterval(function(){
         // }, 100)
-        
-        // function changeLeds() {
-        //     let size = document.querySelector("#size").value
-        //     size < 1 ? size = 1 : size = size
-        //     size > 10 ? size = 10 : size = size
-        //     document.querySelector("#size").value = size
-        //     document.querySelector("#leds").innerHTML = ""
-        //     for (let i = 0; i < size; i++) {
-        //         document.querySelector("#leds").innerHTML += "<button class='colorButton' id='buttonLed" + i + "' name='led' value='" + i + "' style='background-color: "+ledsArray[i]["color"]+";' onclick='selectLed(this)'>" + (i + 1)
-        //     }
-        // }
 
-        function changeColorBox(){
+        function changeLeds() {
+            let size = document.querySelector("#size").value
+            size < 1 ? size = 1 : size = size
+            size > 10 ? size = 10 : size = size
+            document.querySelector("#size").value = size
+            let op = lastSize - size
+            lastSize = size
+            if (op < 0) {
+                for (let i = 0; i < (op * -1); i++) {
+                    ledsArray.push({ "n": size - 1 + i, "color": "#0000ff" })
+                }
+            } else {
+                for (let i = 0; i < op; i++) {
+                    ledsArray.pop()
+                }
+            }
+            document.querySelector("#leds").innerHTML = ""
+            for (let i = 0; i < size; i++) {
+                document.querySelector("#leds").innerHTML += "<button class='colorButton' id='buttonLed" + i + "' name='led' value='" + i + "' style='background-color: " + ledsArray[i]["color"] + ";' onclick='selectLed(this)'>" + (i + 1)
+            }
+        }
+
+        function changeColorBox() {
             let color = document.getElementById("colorBox").value
             let r = color.slice(1, -4)
             let g = color.slice(3, -2)
@@ -129,6 +138,7 @@
             document.getElementById("g").value = parseInt(g, 16)
             document.getElementById("b").value = parseInt(b, 16)
             document.getElementById("buttonLed" + activeLed).style.backgroundColor = color
+            ledsArray[activeLed]["color"] = color
         }
 
         function rgbChange() {
@@ -147,6 +157,31 @@
             let color = "#" + decToHex(r) + decToHex(g) + decToHex(b)
             document.getElementById("colorBox").value = color
             document.getElementById("buttonLed" + activeLed).style.backgroundColor = color
+            ledsArray[activeLed]["color"] = color
+        }
+
+        function resetLeds() {
+            let size = document.querySelector("#size").value
+            for (let i = 0; i < size; i++) {
+                ledsArray.pop()
+            }
+            var jsonData = JSON.parse(actualJson);
+            size = jsonData["payload"]["size"]
+            lastSize = size
+            document.querySelector("#size").value = size
+            for (let i = 0; i < size; i++) {
+                let r = decToHex(jsonData["payload"]["nodes"]["node_" + i]["r"])
+                let g = decToHex(jsonData["payload"]["nodes"]["node_" + i]["g"])
+                let b = decToHex(jsonData["payload"]["nodes"]["node_" + i]["b"])
+                let color = "#" + r + g + b
+                ledsArray.push({ "n": i, "color": color });
+            }
+            document.querySelector("#leds").innerHTML = ""
+            for (let i = 0; i < size; i++) {
+                document.querySelector("#leds").innerHTML += "<button class='colorButton' id='buttonLed" + i + "' name='led' value='" + i + "' style='background-color: " + ledsArray[i]["color"] + ";' onclick='selectLed(this)'>" + (i + 1)
+            }
+            document.getElementById('colorBox').value = ledsArray[0]["color"]
+            changeColorBox();
         }
 
         function getConfigJson() {
@@ -158,37 +193,30 @@
             console.log("SEND MESSAGE: " + JSON.stringify(JsonData));
             socket.send(JSON.stringify(JsonData))
         }
+ 
 
-        // $("#salvarWifi").on('click', function () {
-        //     console.log('salvando Wifi');
-        //     var canal = $('#channelInputField').val();
-        //     switch (canal) {
-        //         case "1 (2412 MHz)":
-        //             canal = 1;
-        //             break
-        //         case "2 (2417 MHz)":
-        //             canal = 2;
-        //             break
-        //     }
-        //     var JsonData = {
-        //         "wifiParameters": {
-        //             "WIFI_usuario": $('#ssidInputField').val(),
-        //             "WIFI_senha": $('#passInputField').val(),
-        //             "WIFI_fixo": $('#customSwitch1').is(':checked'),
-        //             "WIFI_ip": $('#WIFI_ip').val(),
-        //             "WIFI_gateway": $('#WIFI_gateway').val(),
-        //             "WIFI_subnet": $('#WIFI_subnet').val(),
-        //             "WIFI_canal": canal
-        //         }
-        //     };
-        //     socket.send(JSON.stringify(JsonData));
-        //     console.log(JsonData);
-        //     //socketMessage(JsonData);
-        // });
+        function saveConfig() {
+            let size = document.querySelector("#size").value
+            console.log(size)
+            var JsonData = `{"payload":{"size":`+size+`,"nodes":{`
+            for (let i = 0; i < size; i++) {
+                let color = ledsArray[i]["color"]
+                let r = parseInt(color.slice(1, -4), 16)
+                let g = parseInt(color.slice(3, -2), 16)
+                let b = parseInt(color.slice(5), 16)
+                JsonData += `"node_`+i+`":{"0":`+r+`,"1":`+g+`,"2":`+b+`}`
+                if(i+1<size){
+                    JsonData += ","
+                }
+            }                            
+            JsonData += `}}}`
+            socket.send(JsonData)
+            console.log(JsonData)
+        }
 
         function connectWebSocket() {
-            //socket = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
-            socket = new WebSocket('ws://192.168.4.1:81/', ['arduino']);
+            socket = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
+            //socket = new WebSocket('ws://192.168.4.1:81/', ['arduino']);
 
             socket.binaryType = 'arraybuffer';
 
@@ -213,32 +241,15 @@
                 var jsonData = JSON.parse(e.data);
                 switch (Object.keys(jsonData)[0]) {
                     case "payload":
-                        console.log("INCOMING MESSAGE: " + JSON.stringify(jsonData));
-                        let size = jsonData["payload"]["size"]
-                        document.querySelector("#size").value = size
-                        for(let i=0;i<size;i++){
-                            let r = decToHex(jsonData["payload"]["nodes"]["node_"+i]["r"])
-                            let g = decToHex(jsonData["payload"]["nodes"]["node_"+i]["g"])
-                            let b = decToHex(jsonData["payload"]["nodes"]["node_"+i]["b"])
-                            let color = "#"+r+g+b
-                            ledsArray.push({ "n": i, "color": color});
-                        }
-                        for (let i = 0; i < size; i++) {
-                            document.querySelector("#leds").innerHTML += "<button class='colorButton' id='buttonLed" + i + "' name='led' value='" + i + "' style='background-color: "+ledsArray[i]["color"]+";' onclick='selectLed(this)'>" + (i + 1)
-                        }
-                        document.getElementById('colorBox').value = ledsArray[0]["color"]
-                        changeColorBox();
-
-
-
+                        actualJson = JSON.stringify(jsonData)
+                        console.log("INCOMING MESSAGE: " + actualJson);
+                        resetLeds()
                         break;
                 }
             }
         }
 
-
-//===================================
-        function decToHex(n){
+        function decToHex(n) {
             let sn = Number(n).toString(16)
             n < 16 ? sn = "0" + sn : sn = sn
             return sn
@@ -250,7 +261,7 @@
 
 <body>
     <div id="frame">
-        <h1>RGB strip configuration </h1>
+        <h1>LED configuration </h1>
         <hr>
         <p>Number of LEDs <input type="number" class="rgb" id="size" min="1" max="10" onchange="changeLeds()">
         </p>
@@ -259,11 +270,12 @@
         <h2 id="test">Color</h2>
         <input type="color" id="colorBox" onchange="changeColorBox()">
         <p>
-            Red <input type="number" class="rgb" id="r" min="0" max="255" value="0" onchange="rgbChange()">
-            Green <input type="number" class="rgb" id="g" min="0" max="255" value="0" onchange="rgbChange()">
-            Blue <input type="number" class="rgb" id="b" min="0" max="255" value="0" onchange="rgbChange()">
+            R <input type="number" class="rgb" id="r" min="0" max="255" value="0" onchange="rgbChange()">
+            G <input type="number" class="rgb" id="g" min="0" max="255" value="0" onchange="rgbChange()">
+            B <input type="number" class="rgb" id="b" min="0" max="255" value="0" onchange="rgbChange()">
         </p>
-        <button id="sendConfig">Save</button>
+        <p><button class="formButton" id="apply" onclick="saveConfig()">Apply</button><button class="formButton"
+                id="reset" onclick="resetLeds()">Reset</button></p>
     </div>
 </body>
 
