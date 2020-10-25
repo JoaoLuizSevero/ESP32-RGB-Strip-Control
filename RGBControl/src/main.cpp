@@ -32,10 +32,6 @@ void setup()
   pixels.begin();
   configureNodes();
   
-  //pixels.updateLength(nodeLength);
-
-  //sendSignal();
-
   WiFi.mode(WIFI_AP_STA);
   server.on("/", handleRoot);
   server.onNotFound(handleNotFound);
@@ -67,7 +63,7 @@ void startPage()
 void handleRoot()
 {
   SPIFFS.begin();
-  File f = SPIFFS.open("/index.html", "r");
+  File f = SPIFFS.open("/index.html.gz", "r");
   server.streamFile(f, "text/html");
   f.close();
   SPIFFS.end();
@@ -106,7 +102,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
       SPIFFS.begin();
       SPIFFS.remove("/config.txt");
       delay(100);
-      File rFile = SPIFFS.open("/config.txt","w+");
+      File rFile = SPIFFS.open("/config.txt","w");
       rFile.print(buff);
       rFile.close();
       SPIFFS.end();
