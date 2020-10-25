@@ -2,7 +2,7 @@
 
 ## About
 
-This is a **RGB strip control** using a **ESP32** (NODEMCU module) for addressable LEDs. Can set the number of LEDs and the **RGB** color to each one. The **ESP32** create an **access point**, then can be acessed via **192.168.4.1**. 
+This is a **RGB strip control** using a **ESP32** (NODEMCU module) for addressable LEDs. Can set the number of LEDs and the **RGB** color to each one. The **ESP32** create an **access point**, then can be accessed via **192.168.4.1**. 
 
 ### NODEMCU
 ![NODEMCU](https://github.com/JoaoLuizSevero/RGBControl_template/blob/main/RGBControl/assets/node.PNG)
