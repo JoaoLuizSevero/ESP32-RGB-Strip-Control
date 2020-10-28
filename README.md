@@ -1,4 +1,4 @@
-# RGBControl_template
+# ESP32 RGB Strip Control
 
 ## About
 
