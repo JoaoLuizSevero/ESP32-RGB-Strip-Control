@@ -12,7 +12,7 @@ This is a **RGB strip control** using a **ESP32** (NODEMCU module) for addressab
 
 ## WebPage
 
-The page was made using **HTML, CSS and JavaScript** in same file (will be updated with **GULP**), and communicates to the **ESP32** with **WebSocket** sending **JSON** payloads.
+The page was made using **HTML, CSS and JavaScript**, and communicates to the **ESP32** with **WebSocket** sending **JSON** payloads.
 
 ### Page
 ![Page](https://github.com/JoaoLuizSevero/RGBControl_template/blob/main/RGBControl/assets/page.PNG)
